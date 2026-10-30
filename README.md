@@ -3,7 +3,7 @@
 An Android icon pack that turns app icons into black line glyphs. Works with launchers that take icon packs
 (Nova, Lawnchair, Niagara and others).
 
-- About 14,000 icons come from [Arcticons](https://github.com/Arcticons-Team/Arcticons) by the Arcticons team,
+- About 15,000 icons come from [Arcticons](https://github.com/Arcticons-Team/Arcticons) by the Arcticons team,
   licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). They are fetched and rendered at build
   time by `ci/make_icons.py` (black variant, 160px WebP); this repository doesn't contain them.
 - Apps without an Arcticons icon get the launcher fallback: a darkened circle with a black ring.

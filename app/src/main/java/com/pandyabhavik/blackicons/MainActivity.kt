@@ -24,6 +24,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +42,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val NOVA = "com.teslacoilsw.launcher"
 private val LAWNCHAIR = listOf("app.lawnchair", "app.lawnchair.play")
@@ -79,6 +84,7 @@ private fun Home() {
                         "The rest get an automatic one you can set by hand.",
                 )
                 ApplyCard(context)
+                SaveAllButton(all)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(selected = !onlyAuto, onClick = { onlyAuto = false }, label = { Text("All") })
                     FilterChip(
@@ -91,6 +97,25 @@ private fun Home() {
         }
     }
     selected?.let { app -> IconDialog(app) { selected = null } }
+}
+
+@Composable
+private fun SaveAllButton(apps: List<AppIcon>) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var saving by remember { mutableStateOf(false) }
+    OutlinedButton(
+        enabled = !saving,
+        modifier = Modifier.fillMaxWidth(),
+        onClick = {
+            saving = true
+            scope.launch {
+                val saved = withContext(Dispatchers.IO) { apps.count { saveToPhotos(context, it.label, it.bitmap) } }
+                saving = false
+                Toast.makeText(context, "Saved $saved icons to Pictures/BlackIcons", Toast.LENGTH_LONG).show()
+            }
+        },
+    ) { Text(if (saving) "Saving…" else "Save all to Photos (for Good Lock Theme Park)") }
 }
 
 private fun Context.isInstalled(pkg: String) =
