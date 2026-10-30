@@ -1,0 +1,26 @@
+name: Publish installable APK
+
+# Copies the re-signed BlackIcons.apk from the `download` branch into the `latest` release,
+# whose download link is fast and works well from a phone browser.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: download
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: BlackIcons (install this one)
+          target_commitish: download
+          body: "Tap BlackIcons.apk below to download, then open it to install."
+          files: BlackIcons.apk
+          make_latest: true
