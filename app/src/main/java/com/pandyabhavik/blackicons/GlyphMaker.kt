@@ -12,7 +12,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 
-/** Turns any app icon into a black glyph on a transparent background. */
+/** Turns any app icon into a white glyph on a black circle, matching the pack's icons. */
 object GlyphMaker {
     const val SIZE = 192
     private const val WORK = 216
@@ -106,20 +106,22 @@ object GlyphMaker {
             }
         }
         val out = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        canvas.drawCircle(SIZE / 2f, SIZE / 2f, SIZE / 2f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK })
         if (right < 0) return out
 
         val alphaBitmap = Bitmap.createBitmap(WORK, WORK, Bitmap.Config.ALPHA_8)
         alphaBitmap.setPixels(IntArray(mask.size) { (mask[it].coerceIn(0f, 1f) * 255).toInt() shl 24 }, 0, WORK, 0, 0, WORK, WORK)
 
         val w = right - left + 1f; val h = bottom - top + 1f
-        val scale = SIZE * 0.75f / max(w, h)
+        val scale = SIZE * 0.5f / max(w, h)
         val matrix = Matrix().apply {
             postTranslate(-left - w / 2f, -top - h / 2f)
             postScale(scale, scale)
             postTranslate(SIZE / 2f, SIZE / 2f)
         }
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply { color = Color.BLACK }
-        Canvas(out).drawBitmap(alphaBitmap, matrix, paint)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply { color = Color.WHITE }
+        canvas.drawBitmap(alphaBitmap, matrix, paint)
         alphaBitmap.recycle()
         return out
     }

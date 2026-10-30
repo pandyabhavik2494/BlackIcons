@@ -21,18 +21,17 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      # The black line icons and their app list come from the Arcticons project (icons CC BY-SA 4.0).
+      # The line icons and their app list come from the Arcticons project (icons CC BY-SA 4.0).
       - name: Fetch Arcticons
         run: |
           git clone --depth 1 --filter=blob:none --sparse https://github.com/Arcticons-Team/Arcticons arcticons
-          git -C arcticons sparse-checkout set icons/black app/src/main/res/xml
+          git -C arcticons sparse-checkout set icons/white app/src/main/res/xml
           echo "ARCTICONS_SHA=$(git -C arcticons rev-parse --short HEAD)" >> "$GITHUB_ENV"
 
       - name: Render the icons
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq librsvg2-bin webp
-          python3 ci/make_icons.py arcticons app/src/main 160
+          pip install -q cairosvg pillow
+          python3 ci/make_icons.py arcticons app/src/main 192
           du -sh app/src/main/res/drawable-nodpi
 
       - name: Build

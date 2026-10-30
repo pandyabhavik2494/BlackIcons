@@ -8,6 +8,11 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
+import androidx.core.content.FileProvider
+import androidx.core.graphics.drawable.toBitmap
+import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -80,8 +85,8 @@ private fun Home() {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("BlackIcons", fontSize = 32.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    "$covered of your ${all.size} apps have a hand-drawn black icon. " +
-                        "The rest get an automatic one you can set by hand.",
+                    "$covered of your ${all.size} apps have a matching icon. " +
+                        "Send the rest to Claude and they'll be added to the pack.",
                 )
                 ApplyCard(context)
                 SaveAllButton(all)
@@ -122,19 +127,54 @@ private fun SaveAllButton(apps: List<AppIcon>) {
 @Composable
 private fun ShareMissingButton(missing: List<AppIcon>) {
     val context = LocalContext.current
-    OutlinedButton(
-        enabled = missing.isNotEmpty(),
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    Button(
+        enabled = missing.isNotEmpty() && !busy,
         modifier = Modifier.fillMaxWidth(),
         onClick = {
-            val pack = AppRepo.pack(context)
-            val text = missing.joinToString("\n", prefix = "BlackIcons missing apps (${missing.size}):\n") {
-                "${it.label} | ${it.component.flattenToString()} | ${pack.drawableForPackage(it.component.packageName) ?: "-"}"
+            busy = true
+            scope.launch {
+                val uri = withContext(Dispatchers.IO) { missingAppsZip(context, missing) }
+                busy = false
+                context.startActivity(
+                    Intent.createChooser(
+                        Intent(Intent.ACTION_SEND).setType("application/zip")
+                            .putExtra(Intent.EXTRA_STREAM, uri)
+                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                        "Send to Claude",
+                    ),
+                )
             }
-            context.startActivity(
-                Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), null),
-            )
         },
-    ) { Text("Share missing apps (${missing.size})") }
+    ) { Text(if (busy) "Preparing…" else "Send my apps to Claude (${missing.size} missing)") }
+}
+
+/** A zip Claude turns into icons for these apps: their list, their own icons and the automatic glyphs. */
+private fun missingAppsZip(context: Context, missing: List<AppIcon>): android.net.Uri {
+    val pack = AppRepo.pack(context)
+    val pm = context.packageManager
+    val dir = File(context.cacheDir, "share").apply { mkdirs() }
+    val file = File(dir, "blackicons-apps.zip")
+    ZipOutputStream(file.outputStream().buffered()).use { zip ->
+        fun png(name: String, bitmap: Bitmap) {
+            zip.putNextEntry(ZipEntry(name))
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, zip)
+            zip.closeEntry()
+        }
+        val list = StringBuilder()
+        missing.forEachIndexed { i, app ->
+            val id = "app%03d".format(i)
+            list.append("$id\t${app.label}\t${app.component.flattenToString()}\t${pack.drawableForPackage(app.component.packageName) ?: "-"}\n")
+            png("glyph/$id.png", app.bitmap)
+            runCatching { pm.getActivityIcon(app.component).toBitmap(GlyphMaker.SIZE, GlyphMaker.SIZE) }
+                .getOrNull()?.let { png("original/$id.png", it) }
+        }
+        zip.putNextEntry(ZipEntry("apps.tsv"))
+        zip.write(list.toString().toByteArray())
+        zip.closeEntry()
+    }
+    return FileProvider.getUriForFile(context, "${context.packageName}.files", file)
 }
 
 private fun Context.isInstalled(pkg: String) =
