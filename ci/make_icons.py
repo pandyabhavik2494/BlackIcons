@@ -77,6 +77,10 @@ icons = sorted(made - set(EXTRA))
 print(f"rendered {len(icons)} icons")
 
 appfilter_in = open(os.path.join(src, "app", "src", "main", "res", "xml", "appfilter.xml"), encoding="utf-8").read()
+# Our own matches for Bhavik's apps whose activity names Arcticons doesn't list (yet). Listed first so they win.
+extra = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extra_appfilter.xml")
+if os.path.exists(extra):
+    appfilter_in = open(extra, encoding="utf-8").read() + appfilter_in
 lines = ['<?xml version="1.0" encoding="utf-8"?>', "<resources>",
          '\t<iconmask img1="iconmask"/>', '\t<iconupon img1="iconupon"/>', '\t<scale factor="0.62"/>']
 items = 0

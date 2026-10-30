@@ -85,6 +85,7 @@ private fun Home() {
                 )
                 ApplyCard(context)
                 SaveAllButton(all)
+                ShareMissingButton(all.filterNot { it.covered })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(selected = !onlyAuto, onClick = { onlyAuto = false }, label = { Text("All") })
                     FilterChip(
@@ -116,6 +117,24 @@ private fun SaveAllButton(apps: List<AppIcon>) {
             }
         },
     ) { Text(if (saving) "Saving…" else "Save all to Photos (for Good Lock Theme Park)") }
+}
+
+@Composable
+private fun ShareMissingButton(missing: List<AppIcon>) {
+    val context = LocalContext.current
+    OutlinedButton(
+        enabled = missing.isNotEmpty(),
+        modifier = Modifier.fillMaxWidth(),
+        onClick = {
+            val pack = AppRepo.pack(context)
+            val text = missing.joinToString("\n", prefix = "BlackIcons missing apps (${missing.size}):\n") {
+                "${it.label} | ${it.component.flattenToString()} | ${pack.drawableForPackage(it.component.packageName) ?: "-"}"
+            }
+            context.startActivity(
+                Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), null),
+            )
+        },
+    ) { Text("Share missing apps (${missing.size})") }
 }
 
 private fun Context.isInstalled(pkg: String) =
