@@ -1,0 +1,13 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.kotlin/
+app/src/main/res/drawable-nodpi/
+app/src/main/res/xml/appfilter.xml
+app/src/main/res/xml/drawable.xml
+app/src/main/assets/
+arcticons/

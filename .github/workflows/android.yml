@@ -1,0 +1,56 @@
+name: Build BlackIcons
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # The black line icons and their app list come from the Arcticons project (icons CC BY-SA 4.0).
+      - name: Fetch Arcticons
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/Arcticons-Team/Arcticons arcticons
+          git -C arcticons sparse-checkout set icons/black app/src/main/res/xml
+          echo "ARCTICONS_SHA=$(git -C arcticons rev-parse --short HEAD)" >> "$GITHUB_ENV"
+
+      - name: Render the icons
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq librsvg2-bin webp
+          python3 ci/make_icons.py arcticons app/src/main 160
+          du -sh app/src/main/res/drawable-nodpi
+
+      - name: Build
+        env:
+          BLACKICONS_VERSION_CODE: ${{ github.run_number }}
+        run: ./gradlew --no-daemon assembleRelease
+
+      # Signed with this machine's throwaway debug key; the copy that gets installed is re-signed
+      # with BlackIcons' own key in the cloud session.
+      - name: Name the app file
+        run: cp app/build/outputs/apk/release/app-release.apk BlackIcons-ci.apk && ls -la BlackIcons-ci.apk
+
+      - name: Publish the build
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: BlackIcons (build ${{ github.run_number }})
+          target_commitish: ${{ github.sha }}
+          body: "Build output for re-signing. Not for installing directly. Icons from Arcticons ${{ env.ARCTICONS_SHA }} (CC BY-SA 4.0)."
+          files: BlackIcons-ci.apk
+          prerelease: true
